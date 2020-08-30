@@ -1,8 +1,80 @@
+* {
+    margin: 0px;
+    padding: 0px;
+}
+
+body,
+html {
+    height: 100%;
+    width: 100%;
+}
+
 body {
-  padding: 50px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+    padding: 50px;
+    font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
 }
 
 a {
-  color: #00B7FF;
+    color: #00B7FF;
+}
+
+
+/* Coming soon page. */
+
+.mtb-api-cs-logo {
+    width: 20%;
+}
+
+.mtb-api-cs-api-text {
+    background-color: #00a99d;
+    color: #FFFFFF;
+    height: auto;
+    padding: 0.3rem 0.8rem;
+    display: block;
+}
+
+.mtb-api-cs-api-coming-soon-text {
+    font-size: 70px;
+    text-transform: uppercase;
+    font-weight: 800;
+    margin: 2rem 1rem 0rem 1rem;
+}
+
+p {
+    font-weight: 500;
+    font-size: 18px;
+    text-transform: uppercase;
+}
+
+@media (max-width: 575.98px) {
+    .mtb-api-cs-logo {
+        width: 50%;
+    }
+}
+
+
+/* Small devices (landscape phones, less than 768px) */
+
+@media (max-width: 767.98px) {
+    .mtb-api-cs-logo {
+        width: 40%;
+    }
+}
+
+
+/* Medium devices (tablets, less than 992px) */
+
+@media (max-width: 991.98px) {
+    .mtb-api-cs-logo {
+        width: 30%;
+    }
+}
+
+
+/* Large devices (desktops, less than 1200px) */
+
+@media (max-width: 1199.98px) {
+    .mtb-api-cs-logo {
+        width: 30%;
+    }
 }

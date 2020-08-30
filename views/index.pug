@@ -1,5 +1,14 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
+  .container-fluid.h-100
+    .row.h-100
+      .col-12.align-self-center
+        .row
+          .col-12.d-flex.justify-content-center
+            img(src="/images/mtibu-logo-colour.svg", alt="mTibu Logo").mtb-api-cs-logo
+            .api-text
+              h5.mtb-api-cs-api-text API
+          .col-12.d-flex.align-items-center.flex-column
+            h1.mtb-api-cs-api-coming-soon-text API Coming Soon
+            p mtibu all your medical history in one place
