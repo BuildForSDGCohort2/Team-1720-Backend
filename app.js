@@ -1,14 +1,41 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-var favicon = require('serve-favicon');
+const createError = require('http-errors');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const favicon = require('serve-favicon');
+const cors = require('cors');
+require('dotenv').config({ path: './bin/.env', debug: process.env.DEBUG });
+require('./db/db');
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+const indexRouter = require('./routes/index');
+const usersRouter = require('./routes/users');
 
-var app = express();
+const apiRouter = require('./api/api');
+const expressip = require('express-ip');
+
+// ****************************************
+//  HANDLING CORS VALIDATION
+// ****************************************
+
+const originsWhitelist = [
+    'http://localhost:4200', //this is my front-end url for development
+    'https://mtibu.herokuapp.com'
+];
+const corsOptions = {
+    origin: function(origin, callback) {
+        var isWhitelisted = originsWhitelist.indexOf(origin) !== -1;
+        callback(null, isWhitelisted);
+    },
+    credentials: true,
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE"
+}
+
+// ****************************************
+//  HANDLING CORS VALIDATION
+// ****************************************
+
+const app = express();
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -20,9 +47,24 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(favicon(path.join(__dirname, 'public', 'images', 'favicon.ico')));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", '*');
+    res.header(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    );
+    if (req.method === 'OPTIONS') {
+        res.header('Access-Control-Allow-Methods', 'PUT, POST, PATCH, DELETE, GET');
+        return res.status(200).json({});
+    }
+    next();
+});
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+
+// ************
+// Routing
+// ************
+app.use('/api', apiRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

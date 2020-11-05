@@ -3,7 +3,7 @@ var router = express.Router();
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-    res.render('index', { title: 'mTibu - Medical help is only one click away' });
+  res.render('index', { title: 'Express' });
 });
 
 module.exports = router;
