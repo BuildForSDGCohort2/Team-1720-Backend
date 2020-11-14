@@ -43,7 +43,6 @@ const userSchema = mongoose.Schema({
     },
     email: {
         type: String,
-        required: true,
         unique: true,
         lowercase: true,
         validate: value => {
@@ -53,6 +52,10 @@ const userSchema = mongoose.Schema({
                 })
             }
         }
+    },
+    mobile: {
+        type: String,
+        unique: true
     },
     password: {
         type: String,
@@ -140,15 +143,17 @@ userSchema.statics.findByCredentials = async(email, password) => {
         email
     })
     if (!user) {
-        throw new Error({
-            error: 'Invalid login credentials'
-        })
+        // throw new Error({
+        //     error: 'Invalid login credentials'
+        // })
+        return { 'error': 'Invalid login credentials' };
     }
     const isPasswordMatch = await bcrypt.compare(password, user.password)
     if (!isPasswordMatch) {
-        throw new Error({
-            error: 'Invalid login credentials'
-        })
+        // throw new Error({
+        //     error: 'Invalid login credentials'
+        // });
+        return { 'error': 'Invalid login credentials' };
     }
     return user
 }

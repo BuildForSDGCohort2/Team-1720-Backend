@@ -5,6 +5,7 @@ const UserReset = require('../models/users/UserReset');
 const UserConfirmation = require('../models/users/UserConfirmation');
 const UserNotFound = require('../models/users/UserNotRegistered');
 const bcryptjs = require('bcrypt');
+const generator = require('generate-password');;
 const auth = require('../middleware/auth')
 const emailReset = require('../helpers/emailHelpers').emailHelperResetPassword;
 const passwordFinalEmail = require('../helpers/emailHelpers').emailHelperPasswordHasBeenReseted;
@@ -19,16 +20,35 @@ const getUTC = require('../helpers/timeHelper').getUTCNow;
 const getUTCOffset = require('../helpers/timeHelper').getUTCOffset;
 const isTokenValid = require('../helpers/tokenValidator').isTokenExpired;
 
-console.log(process.env.DB_NAME);
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
-    res.send('respond with a resource - mtatibu');
+    res.send({ 'message': 'respond with a resource - mtatibu' });
 });
 
 router.post('/register', async(req, res) => {
 
-    const user = new User(req.body)
+    const gen_password = generator.generate({ length: 14, numbers: true, symbols: true });
+
+    const newUserSubmitted = {
+        first_name: req.body.firstName,
+        last_name: req.body.lastName,
+        full_name: req.body.fullName,
+        gender: req.body.gender,
+        terms_and_conditions: req.body.termsAndConditions,
+        date_of_birth: req.body.dateOfBirth,
+        email: req.body.email,
+        mobile: req.body.mobile,
+        user_status: req.body.userStatus,
+        user_account_verified: req.body.verified,
+        password: gen_password
+    };
+    // return false;
+
+    console.log(gen_password);
+
+    // const user = new User(req.body)
+    const user = new User(newUserSubmitted)
     await user.save()
     const token = await user.generateAuthToken()
 
@@ -147,13 +167,24 @@ router.post('/login', async(req, res) => {
         const {
             email,
             password
-        } = req.body
-        const user = await User.findByCredentials(email, password)
+        } = req.body;
+
+        const user = await User.findByCredentials(email, password);
         if (!user) {
             return res.status(401).send({
-                error: 'Login failed! Check authentication credentials'
+                message: 'Login failed! Please enter the correct username and password'
             })
         }
+
+        console.log(user);
+
+        // There was an error.
+        if (user.error !== undefined && user.error.length > 0) {
+            return res.status(401).send({
+                message: 'Login failed! Please enter the correct username and password'
+            });
+        }
+
         const token = await user.generateAuthToken();
 
         res.send({
@@ -166,7 +197,7 @@ router.post('/login', async(req, res) => {
     } catch (error) {
         res.status(400).send({
             'message': error
-        })
+        });
     }
 
 });
