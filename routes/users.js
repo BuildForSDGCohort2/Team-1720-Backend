@@ -30,7 +30,9 @@ router.post('/register', async(req, res) => {
 
     const gen_password = generator.generate({ length: 14, numbers: true, symbols: true });
 
+
     const newUserSubmitted = {
+        user_type: req.body.userType,
         first_name: req.body.firstName,
         last_name: req.body.lastName,
         full_name: req.body.fullName,
@@ -41,16 +43,42 @@ router.post('/register', async(req, res) => {
         mobile: req.body.mobile,
         user_status: req.body.userStatus,
         user_account_verified: req.body.verified,
-        password: gen_password
+        // password: gen_password
+        password: req.body.password
     };
     // return false;
-
-    console.log(gen_password);
-
-    // const user = new User(req.body)
     const user = new User(newUserSubmitted)
-    await user.save()
-    const token = await user.generateAuthToken()
+
+    const userSignUp = await User.findByRegistrationID(req.body.email, req.body.mobile);
+
+    console.log(req.body.email.length);
+
+    // Check if the user already exists
+    try {
+        const userSignUp = await User.findByRegistrationID(req.body.email, req.body.mobile);
+
+        if (userSignUp) {
+            return res.status(403).send({ "message": "User already exists" });
+        }
+
+        // const user = new User(req.body)
+        await user.save()
+        const token = await user.generateAuthToken();
+
+    } catch (error) {
+        if (error) {
+
+            // console.error(error.message);
+
+            if (error.message.includes("duplicate key")) {
+                return res.status(403).send({ "message": "User already exists" });
+            }
+
+            console.error(error.message);
+        }
+    }
+
+
 
     // Create a new user
     try {

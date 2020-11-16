@@ -76,6 +76,10 @@ const userSchema = mongoose.Schema({
         type: String,
         required: true
     },
+    user_type: {
+        type: String,
+        required: true
+    },
     user_account_verified: {
         type: Boolean
     },
@@ -163,6 +167,31 @@ userSchema.statics.findByEmail = async(email) => {
     const user = await User.findOne({
         email
     });
+
+    if (!user) {
+        throw TypeError('Invalid email provided');
+    }
+
+    return user;
+}
+
+// Find User for reset password
+userSchema.statics.findByRegistrationID = async(email, mobile) => {
+
+    // Check for empty fields
+    let query;
+
+    if (email.length === 0 && mobile.length > 0) {
+        query = { mobile };
+    } else if (mobile.length === 0 && email.length > 0) {
+        query = { email };
+    } else if (mobile.length > 0 && email.length > 0) {
+        query = { $or: [{ email, mobile }] };
+    } else {
+        return { "message": "Invalid request" }
+    }
+
+    const user = await User.findOne(query);
 
     if (!user) {
         throw TypeError('Invalid email provided');
