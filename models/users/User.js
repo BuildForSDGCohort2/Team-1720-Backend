@@ -3,6 +3,7 @@ const validator = require('validator')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const cryptoRandomString = require('crypto-random-string')
+const isValidEmail = require('../../helpers/custom-email-validator').isValidEmailAddress;
 
 const userSchema = mongoose.Schema({
     first_name: {
@@ -62,6 +63,10 @@ const userSchema = mongoose.Schema({
         required: true,
         minLength: 7
     },
+    about_me: {
+        type: String,
+        trim: true
+    },
     has_updated_password: {
         type: Boolean
     },
@@ -83,6 +88,68 @@ const userSchema = mongoose.Schema({
     user_account_verified: {
         type: Boolean
     },
+    user_settings: [{
+        preferred_temp_prefix: {
+            type: String,
+            trim: true
+        },
+        preferred_time_format: {
+            type: String,
+            trim: true
+        },
+        general_doctor_enquiry_basic_info: {
+            type: String,
+            trim: true
+        },
+        general_doctor_enquiry_medical_history: {
+            type: String,
+            trim: true
+        },
+        general_doctor_enquiry_medical_allergies: {
+            type: String,
+            trim: true
+        },
+        preferred_language: {
+            type: String,
+            trim: true
+        }
+    }],
+    user_ratings: [{
+        mtb_id: {
+            type: String,
+            trim: true
+        },
+        rating_message: {
+            type: String,
+            trim: true
+        },
+        rating_value: {
+            type: String,
+            trim: true
+        }
+    }],
+    user_ratings_avg: {
+        type: String,
+        trim: true
+    },
+    doc_price_settings: [{
+        currency: {
+            type: String,
+            trim: true
+        },
+        currency_abbrv: {
+            type: String,
+            trim: true
+        },
+        general_consultation_price: {
+            type: String,
+            trim: true
+        },
+        general_referral_price: {
+            type: String,
+            trim: true
+        }
+    }],
     tokens: [{
         token: {
             type: String,
@@ -132,7 +199,7 @@ userSchema.methods.generateAuthToken = async function() {
 
     const token = jwt.sign({
         _id: user._id
-    }, process.env.JWT_KEY) + randoms
+    }, process.env.JWT_KEY)
 
     user.tokens = user.tokens.concat({
         token
@@ -141,25 +208,39 @@ userSchema.methods.generateAuthToken = async function() {
     return token
 }
 
-userSchema.statics.findByCredentials = async(email, password) => {
+userSchema.statics.findByCredentials = async(username, password) => {
+
+
+    const checkIfEmail = isValidEmail(username);
+    let userFind = {}
+
+    if (checkIfEmail) {
+        userFind.email = username;
+    } else {
+        userFind.mobile = username;
+    }
+
     // Search for a user by email and password.
-    const user = await User.findOne({
-        email
-    })
+    const user = await User.findOne(userFind);
+
     if (!user) {
         // throw new Error({
-        //     error: 'Invalid login credentials'
-        // })
+        //         error: 'Invalid login credentials'
+        //     })
         return { 'error': 'Invalid login credentials' };
     }
+
+
     const isPasswordMatch = await bcrypt.compare(password, user.password)
+
     if (!isPasswordMatch) {
         // throw new Error({
         //     error: 'Invalid login credentials'
         // });
         return { 'error': 'Invalid login credentials' };
     }
-    return user
+
+    return user;
 }
 
 // Find User for reset password
@@ -193,11 +274,11 @@ userSchema.statics.findByRegistrationID = async(email, mobile) => {
 
     const user = await User.findOne(query);
 
-    if (!user) {
-        throw TypeError('Invalid email provided');
+    if (user) {
+        return user;
     }
 
-    return user;
+    return false;
 }
 
 // Update the users password.
@@ -242,6 +323,43 @@ userSchema.statics.updateSingleUserVerificationAccount = async(user_id) => {
 
     return user;
 
+}
+
+// Update Profile
+userSchema.statics.updateUserProfile = async(user_id, data) => {
+
+    // const updateProfile = await User.updateMany({ _id: user_id }, { $set: data }, { new: true, useFindAndModify: false });
+    // const updateProfile = await User.updateOne({ "tokens._id": user_id }, { $set: data }, { new: true });
+
+    // if (updateProfile.nModified === false) {
+    //     throw new Error({
+    //         error: 'Profile failed to update'
+    //     });
+    // }
+
+    // console.log(updateProfile);
+
+    // return true;
+
+    User.updateOne({ "tokens._id": user_id }, { $set: data }, { new: true }, async(err, result) => {
+        if (err) {
+            throw new Error({
+                error: 'Profile failed to update'
+            });
+        }
+
+
+        if (Boolean(result.ok)) {
+            const updatedUser = await User.findOne({ "tokens._id": user_id });
+            return updatedUser;
+        } else {
+            return "Failed updating the user profile";
+        }
+
+        console.log("Hello World");
+
+
+    })
 }
 
 

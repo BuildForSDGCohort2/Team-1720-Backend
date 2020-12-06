@@ -21,6 +21,7 @@ const getUTCOffset = require('../helpers/timeHelper').getUTCOffset;
 const isTokenValid = require('../helpers/tokenValidator').isTokenExpired;
 
 
+
 /* GET users listing. */
 router.get('/', function(req, res, next) {
     res.send({ 'message': 'respond with a resource - mtatibu' });
@@ -29,7 +30,6 @@ router.get('/', function(req, res, next) {
 router.post('/register', async(req, res) => {
 
     const gen_password = generator.generate({ length: 14, numbers: true, symbols: true });
-
 
     const newUserSubmitted = {
         user_type: req.body.userType,
@@ -47,14 +47,13 @@ router.post('/register', async(req, res) => {
         password: req.body.password
     };
     // return false;
-    const user = new User(newUserSubmitted)
+    const user = new User(newUserSubmitted);
 
-    const userSignUp = await User.findByRegistrationID(req.body.email, req.body.mobile);
-
-    console.log(req.body.email.length);
+    // const userSignUp = await User.findByRegistrationID(req.body.email, req.body.mobile);
 
     // Check if the user already exists
     try {
+
         const userSignUp = await User.findByRegistrationID(req.body.email, req.body.mobile);
 
         if (userSignUp) {
@@ -65,6 +64,59 @@ router.post('/register', async(req, res) => {
         await user.save()
         const token = await user.generateAuthToken();
 
+        // Create a new user
+        try {
+
+            const accConfirmTempRef = await accountConfirmationLinkRefHash();
+            const accConfirmLinkToken = await accountConfirmationLinkHash(accConfirmTempRef);
+            const accTempToken = accConfirmLinkToken.token;
+            const accTempExtras = accConfirmLinkToken.extras;
+            const expireTime = new Date().setHours(new Date().getHours() + 1);
+            const { _id, email, full_name } = user;
+
+            const accConfirmTempUser = {
+                user_temp_ref: accConfirmTempRef,
+                user_id: _id,
+                time_added: Date.now(),
+                expire: expireTime,
+                status: "pre-confirmed",
+                email_address_to: email,
+                token: accTempToken,
+                extra_val: accTempExtras
+            }
+
+            try {
+                const userConfirmTemp = new UserConfirmation(accConfirmTempUser);
+                await userConfirmTemp.save(async(err, user) => {
+                    if (err) {
+                        return res.status(403).send({
+                            "message": "User temp was not saved"
+                        });
+                    }
+
+                    const sendEmail = await registerNewUserEmail(email, full_name, accConfirmTempRef);
+
+                    if (sendEmail === "Email was sent") {
+                        res.status(200).send({
+                            "message": token
+                        })
+                    }
+                })
+            } catch (error) {
+                return res.status(403).send({ "message": "User temp was not saved" });
+            }
+
+            // res.status(201).send({
+            //     token
+            // })
+
+
+        } catch (error) {
+            res.status(400).send({
+                'message': error
+            })
+        }
+
     } catch (error) {
         if (error) {
 
@@ -74,65 +126,12 @@ router.post('/register', async(req, res) => {
                 return res.status(403).send({ "message": "User already exists" });
             }
 
-            console.error(error.message);
+            return res.status(400).send({ "message": error.message });
+
+            // console.error(error.message);
         }
     }
 
-
-
-    // Create a new user
-    try {
-
-        const accConfirmTempRef = await accountConfirmationLinkRefHash();
-        const accConfirmLinkToken = await accountConfirmationLinkHash(accConfirmTempRef);
-        const accTempToken = accConfirmLinkToken.token;
-        const accTempExtras = accConfirmLinkToken.extras;
-        const expireTime = new Date().setHours(new Date().getHours() + 1);
-        const { _id, email, full_name } = user;
-
-        const accConfirmTempUser = {
-            user_temp_ref: accConfirmTempRef,
-            user_id: _id,
-            time_added: Date.now(),
-            expire: expireTime,
-            status: "pre-confirmed",
-            email_address_to: email,
-            token: accTempToken,
-            extra_val: accTempExtras
-        }
-
-        try {
-            const userConfirmTemp = new UserConfirmation(accConfirmTempUser);
-            await userConfirmTemp.save(async(err, user) => {
-                if (err) {
-                    return res.status(403).send({
-                        "message": "User temp was not saved"
-                    });
-                }
-
-                const sendEmail = await registerNewUserEmail(email, full_name, accConfirmTempRef);
-
-                if (sendEmail === "Email was sent") {
-                    res.status(200).send({
-                        "message": token
-                    })
-                }
-            })
-        } catch (error) {
-            return res.status(403).send({ "message": "User temp was not saved" });
-        }
-
-        // res.status(201).send({
-        //     token
-        // })
-
-
-    } catch (error) {
-        console.log(error);
-        res.status(400).send({
-            'message': error
-        })
-    }
 })
 
 router.get('/confirm-user/', async(req, res) => {
@@ -193,18 +192,17 @@ router.post('/login', async(req, res) => {
     //Login a registered user
     try {
         const {
-            email,
+            username,
             password
         } = req.body;
 
-        const user = await User.findByCredentials(email, password);
+        const user = await User.findByCredentials(username, password);
+
         if (!user) {
             return res.status(401).send({
                 message: 'Login failed! Please enter the correct username and password'
             })
         }
-
-        console.log(user);
 
         // There was an error.
         if (user.error !== undefined && user.error.length > 0) {
@@ -223,11 +221,18 @@ router.post('/login', async(req, res) => {
             token
         })
     } catch (error) {
+        console.log('error');
+        console.log(error);
         res.status(400).send({
             'message': error
         });
     }
 
+});
+
+router.get('/me', auth, async(req, res) => {
+    // View logged in user profile
+    res.status(200).send(req.user);
 });
 
 router.get('/me', auth, async(req, res) => {
@@ -527,6 +532,123 @@ router.post('/update-password', async(req, res) => {
         return false;
     }
 
+});
+
+
+// **************************
+// UPDATE THE PROFILE INFO
+// **************************
+
+router.post('/update-profile', auth, async(req, res) => {
+
+    let first_name;
+    let last_name;
+    let full_name;
+    let gender;
+    let terms_and_conditions;
+    let date_of_birth;
+    let email;
+    let mobile;
+    let user_status;
+    let user_account_verified;
+    let password;
+    let height;
+    let weight;
+    let about_me;
+
+    const token = req.user.tokens[0].token;
+    const id = req.user.tokens[0]._id;
+    let update_data = {};
+
+    // Updating the first_name
+    if (req.body.firstName !== undefined && req.body.firstName.length > 0) {
+        update_data.first_name = req.body.firstName;
+    }
+
+    // Updating the last_name
+    if (req.body.lastName !== undefined && req.body.lastName.length > 0) {
+        update_data.last_name = req.body.lastName;
+    }
+
+    // Updating the full_name
+    if (req.body.fullName !== undefined && req.body.fullName.length > 0) {
+        update_data.full_name = req.body.fullName;
+    }
+
+    // Updating the gender
+    if (req.body.gender !== undefined && req.body.gender.length > 0) {
+        update_data.gender = req.body.gender;
+    }
+
+    // Updating the terms_and_conditions
+    if (req.body.terms_and_conditions !== undefined && req.body.terms_and_conditions.length > 0) {
+        update_data.terms_and_conditions = req.body.termsAndConditions;
+    }
+
+    // Updating the date_of_birth
+    if (req.body.date_of_birth !== undefined && req.body.date_of_birth.length > 0) {
+        update_data.date_of_birth = req.body.dateOfBirth;
+    }
+
+    // Updating the email
+    if (req.body.email !== undefined && req.body.email.length > 0) {
+        update_data.email = req.body.email;
+    }
+
+    // Updating the mobile
+    if (req.body.mobile !== undefined && req.body.mobile.length > 0) {
+        update_data.mobile = req.body.mobile;
+    }
+
+    // Updating the user_status
+    if (req.body.user_status !== undefined && req.body.user_status.length > 0) {
+        update_data.user_status = req.body.userStatus;
+    }
+
+    // Updating the user_account_verified
+    if (req.body.user_account_verified !== undefined && req.body.user_account_verified.length > 0) {
+        update_data.user_account_verified = req.body.userAccountVerified;
+    }
+
+    // Updating the height
+    if (req.body.height !== undefined && req.body.height > 0) {
+        update_data.height = req.body.height;
+    }
+
+    // Updating the weight
+    if (req.body.weight !== undefined && req.body.weight > 0) {
+        update_data.weight = req.body.weight;
+    }
+
+    // Updating the about_me
+    if (req.body.aboutMe !== undefined && req.body.aboutMe.length > 0) {
+        update_data.about_me = req.body.aboutMe;
+    }
+
+    try {
+        const update_profile_info = await User.updateUserProfile(id, update_data);
+
+        console.log(update_profile_info);
+
+        if (!update_profile_info) {
+            return res.status(403).send({
+                "message": "Error updating profile"
+            });
+        }
+
+        console.log(update_profile_info);
+
+        res.status(200).send({ message: update_profile_info });
+
+    } catch (error) {
+        console.log(error);
+        res.status(400).send({ "message": error });
+    }
+
+    // console.log(update_data);
+
+
+    // res.status(200).send({ message: "Response was found.." });
 });
 
 
