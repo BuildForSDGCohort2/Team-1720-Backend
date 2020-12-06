@@ -221,8 +221,6 @@ router.post('/login', async(req, res) => {
             token
         })
     } catch (error) {
-        console.log('error');
-        console.log(error);
         res.status(400).send({
             'message': error
         });
@@ -241,8 +239,6 @@ router.get('/me', auth, async(req, res) => {
 });
 
 router.post('/me/logout', auth, async(req, res) => {
-    console.log('This is the response before try.');
-    console.log(req.user.tokens);
     // Log user out of the application
     try {
         req.user.tokens = req.user.tokens.filter((token) => {
@@ -541,20 +537,20 @@ router.post('/update-password', async(req, res) => {
 
 router.post('/update-profile', auth, async(req, res) => {
 
-    let first_name;
-    let last_name;
-    let full_name;
-    let gender;
-    let terms_and_conditions;
-    let date_of_birth;
-    let email;
-    let mobile;
-    let user_status;
-    let user_account_verified;
-    let password;
-    let height;
-    let weight;
-    let about_me;
+    // let first_name;
+    // let last_name;
+    // let full_name;
+    // let gender;
+    // let terms_and_conditions;
+    // let date_of_birth;
+    // let email;
+    // let mobile;
+    // let user_status;
+    // let user_account_verified;
+    // let password;
+    // let height;
+    // let weight;
+    // let about_me;
 
     const token = req.user.tokens[0].token;
     const id = req.user.tokens[0]._id;
@@ -628,7 +624,6 @@ router.post('/update-profile', auth, async(req, res) => {
     try {
         const update_profile_info = await User.updateUserProfile(id, update_data);
 
-        console.log(update_profile_info);
 
         if (!update_profile_info) {
             return res.status(403).send({
@@ -636,16 +631,38 @@ router.post('/update-profile', auth, async(req, res) => {
             });
         }
 
-        console.log(update_profile_info);
+        const {
+            first_name,
+            last_name,
+            full_name,
+            gender,
+            email,
+            mobile,
+            date_of_birth,
+            about_me,
+            height,
+            weight
+        } = update_profile_info;
 
-        res.status(200).send({ message: update_profile_info });
+        const user = {
+            first_name: first_name,
+            last_name: last_name,
+            full_name: full_name,
+            gender: gender,
+            date_of_birth: date_of_birth,
+            email: email,
+            mobile: mobile,
+            about_me: about_me,
+            height: height,
+            weight: weight
+        }
+
+        res.status(200).send({ message: "Update was successful", user: user });
 
     } catch (error) {
         console.log(error);
         res.status(400).send({ "message": error });
     }
-
-    // console.log(update_data);
 
 
     // res.status(200).send({ message: "Response was found.." });

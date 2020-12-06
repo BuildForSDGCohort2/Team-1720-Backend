@@ -341,25 +341,22 @@ userSchema.statics.updateUserProfile = async(user_id, data) => {
 
     // return true;
 
-    User.updateOne({ "tokens._id": user_id }, { $set: data }, { new: true }, async(err, result) => {
-        if (err) {
-            throw new Error({
-                error: 'Profile failed to update'
-            });
-        }
+    const updateProfile = await User.updateOne({ "tokens._id": user_id }, { $set: data }, { new: true });
 
+    if (!updateProfile.ok) {
+        return ({ "message": "Profile failed to update" });
+    }
 
-        if (Boolean(result.ok)) {
-            const updatedUser = await User.findOne({ "tokens._id": user_id });
-            return updatedUser;
-        } else {
-            return "Failed updating the user profile";
-        }
+    const updatedUser = await User.findOne({ "tokens._id": user_id });
 
-        console.log("Hello World");
+    if (!updatedUser) {
+        throw new Error({
+            error: 'Profile update was not updated successfully'
+        })
+    }
 
+    return updatedUser;
 
-    })
 }
 
 
