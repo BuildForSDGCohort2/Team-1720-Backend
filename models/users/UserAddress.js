@@ -73,8 +73,66 @@ const userAddressSchema = mongoose.Schema({
         ip_location: {
             type: String
         },
-        last_loggedIn: {
-            type: String
+        updated_date: {
+            type: Date,
+            default: Date.now
         }
     }]
 });
+
+// Find the user
+userAddressSchema.statics.findUserAddress = async(user_id) => {
+
+    const user = await UserAddresses.findOne({
+        mtb_id: user_id
+    });
+
+    // if (!user) {
+    //     throw TypeError('User is not found');
+    // }
+
+    if (user === null) {
+        return "User address does not exist";
+    }
+
+    return user;
+}
+
+// Fetch the user address
+userAddressSchema.statics.getUserAddress = async(user_id) => {
+
+    // Fetch the user address
+    const updatedUserAddress = await UserAddresses.findOne({ "mtb_id": user_id });
+
+    if (!updatedUserAddress) {
+        throw new Error('No user address was found!');
+    }
+
+    return updatedUserAddress;
+}
+
+// Update the user address information
+userAddressSchema.statics.updateUserAddress = async(user_id, data) => {
+
+    const updatedAddress = await UserAddresses.updateOne({ "mtb_id": user_id }, { $set: data }, { new: true });
+
+    if (!updatedAddress.ok) {
+        return ({ "message": "Addresss failed to update" });
+    }
+
+    // Fetch the updated profile.
+    const updatedUserAddress = await UserAddresses.findOne({ "mtb_id": user_id });
+
+    if (!updatedUserAddress) {
+        throw new Error({
+            error: 'Address update was not updated successfully'
+        });
+    }
+
+    return updatedUserAddress;
+
+}
+
+const UserAddresses = mongoose.model(process.env.DB_PREFIX + 'User_Address', userAddressSchema)
+
+module.exports = UserAddresses

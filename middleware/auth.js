@@ -5,6 +5,10 @@ const auth = async(req, res, next) => {
     // const token = req.header('Authorization').replace('Bearer Token', '');
     // const data = jwt.verify(token, process.env.JWT_KEY);
 
+    if (req.header('Authorization') === undefined) {
+        return res.status(401).send({ error: 'Not authorized to access this resource - to\'ken invalid' });
+    }
+
 
     const token = req.header('Authorization').replace('Bearer ', '');
 
@@ -16,7 +20,7 @@ const auth = async(req, res, next) => {
     jwt.verify(token, process.env.JWT_KEY, async function(err, decoded) {
 
         if (err) {
-            console.log(err.JsonWebTokenError);
+            // console.log(err.JsonWebTokenError);
             return res.status(401).send({ error: 'Not authorized to access this resource - to\'ken invalid' });
         }
 

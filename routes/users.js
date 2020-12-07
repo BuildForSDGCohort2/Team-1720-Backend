@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const logging = require('logging');
 const User = require('../models/users/User');
 const UserReset = require('../models/users/UserReset');
 const UserConfirmation = require('../models/users/UserConfirmation');
 const UserNotFound = require('../models/users/UserNotRegistered');
+const UserAddresses = require('../models/users/UserAddress');
 const bcryptjs = require('bcrypt');
 const generator = require('generate-password');;
 const auth = require('../middleware/auth')
@@ -19,6 +21,8 @@ const userRefHash = require('../helpers/generateHash').userNotFoundHashLinkRef;
 const getUTC = require('../helpers/timeHelper').getUTCNow;
 const getUTCOffset = require('../helpers/timeHelper').getUTCOffset;
 const isTokenValid = require('../helpers/tokenValidator').isTokenExpired;
+const addressFormatter = require('../helpers/address-formatter').formatAddressInfo;
+
 
 
 
@@ -660,13 +664,203 @@ router.post('/update-profile', auth, async(req, res) => {
         res.status(200).send({ message: "Update was successful", user: user });
 
     } catch (error) {
-        console.log(error);
         res.status(400).send({ "message": error });
     }
 
 
     // res.status(200).send({ message: "Response was found.." });
 });
+
+
+// **************************
+// FETCH THE USERS ADDRESS INFO
+// **************************
+
+router.get('/user-address', auth, async(req, res) => {
+
+    const mtbu_id = req.user._id;
+
+    try {
+        const update_user_address = await UserAddresses.getUserAddress(mtbu_id);
+        const response_obj = await addressFormatter(update_user_address);
+
+        if (response_obj.message === "No data was provided") {
+            res.status(400).send({ message: "There was a problem fetching that data" });
+        }
+
+        res.status(200).send({ message: "Data sucessfully fetched", response_data: response_obj });
+
+    } catch (error) {
+
+        if (error instanceof ReferenceError) {
+            console.log(error);
+            res.status(500).send({ "message": "Internal server error" });
+        } else {
+            res.status(400).send({ "message": error.message });
+        }
+
+    }
+
+    // res.status(200).send({ message: "Fetching the users address." });
+});
+
+
+
+// **************************
+// UPDATE THE LOCATION INFO
+// **************************
+
+router.post('/update-address', auth, async(req, res) => {
+
+    const mtbu_id = req.user._id;
+    const token = req.token;
+    const browser = req.header('user-agent');
+    const ip = req.header('x-forwarded-for') !== undefined ? req.header('x-forwarded-for') : '';
+
+    const updateAddressObj = {}
+    const homeAddressSingle = {};
+    const workAddressSingle = {};
+    const updated_single = {};
+
+
+    // Setting the update objects.
+
+    // Setting the last updated information.
+    updated_single.token = token;
+    updated_single.browser = browser;
+    updated_single.ip_location = ip;
+    updateAddressObj.last_updated = updated_single;
+
+    // ***************************
+    // START HOME ADDRESS
+    // ***************************
+    if (req.body.homeAddress !== undefined) {
+
+        // Street Adddress
+        if (req.body.homeAddress.streetAddress !== undefined && req.body.homeAddress.streetAddress.length > 0) {
+            homeAddressSingle.street_address = req.body.homeAddress.streetAddress;
+        }
+
+        // Suburb
+        if (req.body.homeAddress.suburb !== undefined && req.body.homeAddress.suburb.length > 0) {
+            homeAddressSingle.suburb = req.body.homeAddress.suburb;
+        }
+
+        // City
+        if (req.body.homeAddress.city !== undefined && req.body.homeAddress.city.length > 0) {
+            homeAddressSingle.city = req.body.homeAddress.city;
+        }
+
+        // Province
+        if (req.body.homeAddress.province !== undefined && req.body.homeAddress.province.length > 0) {
+            homeAddressSingle.province = req.body.homeAddress.province;
+        }
+
+        // Zip Code
+        if (req.body.homeAddress.zipCode !== undefined && req.body.homeAddress.zipCode.length > 0) {
+            homeAddressSingle.zip_code = req.body.homeAddress.zipCode;
+        }
+
+        // Country
+        if (req.body.homeAddress.country !== undefined && req.body.homeAddress.country.length > 0) {
+            homeAddressSingle.country = req.body.homeAddress.country;
+        }
+
+        updateAddressObj.home_address = homeAddressSingle;
+    }
+
+    // ***************************
+    // START WORK ADDRESS
+    // ***************************
+    if (req.body.workAddress !== undefined) {
+
+        // Street Adddress
+        if (req.body.workAddress.streetAddress !== undefined && req.body.workAddress.streetAddress.length > 0) {
+            workAddressSingle.street_address = req.body.workAddress.streetAddress;
+        }
+
+        // Suburb
+        if (req.body.workAddress.suburb !== undefined && req.body.workAddress.suburb.length > 0) {
+            workAddressSingle.suburb = req.body.workAddress.suburb;
+        }
+
+        // City
+        if (req.body.workAddress.city !== undefined && req.body.workAddress.city.length > 0) {
+            workAddressSingle.city = req.body.workAddress.city;
+        }
+
+        // Province
+        if (req.body.workAddress.province !== undefined && req.body.workAddress.province.length > 0) {
+            workAddressSingle.province = req.body.workAddress.province;
+        }
+
+        // Zip Code
+        if (req.body.workAddress.zipCode !== undefined && req.body.workAddress.zipCode.length > 0) {
+            workAddressSingle.zip_code = req.body.workAddress.zipCode;
+        }
+
+        // Country
+        if (req.body.workAddress.country !== undefined && req.body.workAddress.country.length > 0) {
+            workAddressSingle.country = req.body.workAddress.country;
+        }
+
+        updateAddressObj.work_address = workAddressSingle;
+    }
+
+
+
+    try {
+        const findUserAddress = await UserAddresses.findUserAddress(mtbu_id);
+
+        if (findUserAddress === "User address does not exist") {
+            // Create the user address information.
+            try {
+                // Add the user ID
+                updateAddressObj.mtb_id = mtbu_id;
+                const newUserAddress = new UserAddresses(updateAddressObj);
+                newUserAddress.save();
+
+                const response_obj = await addressFormatter(newUserAddress);
+
+                if (response_obj.message === "No data was provided") {
+                    res.status(400).send({ message: "There was a problem fetching that data" });
+                }
+
+                res.status(200).send({ message: "User address created successfully", response_data: response_obj });
+
+                // res.status(200).send({ message: newUserAddress });
+            } catch (error) {
+                res.status(400).send({ "message": error });
+            }
+        } else if (findUserAddress) {
+            // User was found, you need to update the user.
+            // const update_user_address = await UserAddresses.updateUserAddress(mtbu_id, updateAddressObj);
+            // updateAddressObj.mtb_id = mtbu_id;
+            // const updateUserAddress = new UserAddresses(updateAddressObj);
+            findUserAddress.home_address = findUserAddress.home_address.concat(homeAddressSingle);
+            findUserAddress.work_address = findUserAddress.work_address.concat(workAddressSingle);
+            findUserAddress.last_updated = findUserAddress.last_updated.concat(updated_single);
+            await findUserAddress.save();
+
+            const response_obj = await addressFormatter(findUserAddress);
+
+            if (response_obj.message === "No data was provided") {
+                res.status(400).send({ message: "There was a problem fetching that data" });
+            }
+
+            res.status(200).send({ message: "User address was updated", response_data: response_obj });
+
+            // res.status(200).send({ message: "User address was updated" });
+        } else {
+            // User information was not correct.
+            res.status(200).send({ message: "Please make sure that the information is correct." });
+        }
+
+    } catch (error) {
+        res.status(400).send({ "message": error });
+    }
+
+})
 
 
 module.exports = router;
