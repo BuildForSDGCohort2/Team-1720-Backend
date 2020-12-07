@@ -73,6 +73,7 @@ const userAddressSchema = mongoose.Schema({
         ip_location: {
             type: String
         },
+<<<<<<< HEAD
         updated_date: {
             type: Date,
             default: Date.now
@@ -136,3 +137,10 @@ userAddressSchema.statics.updateUserAddress = async(user_id, data) => {
 const UserAddresses = mongoose.model(process.env.DB_PREFIX + 'User_Address', userAddressSchema)
 
 module.exports = UserAddresses
+=======
+        last_loggedIn: {
+            type: String
+        }
+    }]
+});
+>>>>>>> e8bbfa0... Removing info

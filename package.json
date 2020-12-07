@@ -19,9 +19,17 @@
         "generate-password": "^1.5.1",
         "html-to-text": "^6.0.0",
         "http-errors": "~1.6.3",
+<<<<<<< HEAD
         "jsonwebtoken": "^8.5.1",
         "logging": "^3.2.0",
         "mongoose": "^5.10.11",
+=======
+<<<<<<< HEAD
+=======
+        "jsonwebtoken": "^8.5.1",
+        "mongoose": "^5.10.11",
+>>>>>>> parent of daf2428... + Added the address functionality completely
+>>>>>>> e8bbfa0... Removing info
         "morgan": "~1.9.1",
         "node-fetch": "^2.6.1",
         "nodemailer": "^6.4.14",
